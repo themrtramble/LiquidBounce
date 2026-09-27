@@ -32,6 +32,8 @@ object KillAuraTargetTracker : TargetTracker() {
     /**
      * Allows to ignore when the target is holding a shield,
      * which would normally block attacks.
+     *
+     * BOOSTED: Default already true - ignores shielded enemies for maximum target acquisition.
      */
     private val ignoreShield by boolean("IgnoreShield", true)
 

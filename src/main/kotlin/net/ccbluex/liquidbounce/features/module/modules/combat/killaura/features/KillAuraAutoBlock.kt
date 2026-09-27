@@ -76,6 +76,9 @@ import kotlin.jvm.optionals.getOrNull
 
 object KillAuraAutoBlock : ToggleableValueGroup(ModuleKillAura, "AutoBlocking", false) {
 
+    /**
+     * BOOSTED: Default BlockMode is INTERACT (already was) - simulates vanilla interactions.
+     */
     private val blockMode by enumChoice("BlockMode", BlockMode.INTERACT)
     /**
      * This options means to simulate vanilla use item action.
@@ -85,13 +88,21 @@ object KillAuraAutoBlock : ToggleableValueGroup(ModuleKillAura, "AutoBlocking", 
     private val simulateVanillaUse by boolean("SimulateVanillaUse", true)
     private val unblockMode by enumChoice("UnblockMode", UnblockMode.STOP_USING_ITEM)
 
+    /**
+     * BOOSTED: Reblock ticks expanded from 0..0 to 0..3 default for more natural blocking patterns.
+     * This makes the blocking look more human-like and harder to detect.
+     */
     private val reblockTicksRange by intRange(
-        "Reblock", 0..0, 0..3, "ticks", aliases = listOf("TickOn")
+        "Reblock", 0..3, 0..5, "ticks", aliases = listOf("TickOn")
     ).onChanged { range ->
         reblockTicks = range.random()
     }
+
+    /**
+     * BOOSTED: PauseOnUnblock range expanded for more variety.
+     */
     private val pauseOnUnblockTicksRange by intRange(
-        "PauseOnUnblock", 0..0, 0..3, "ticks", aliases = listOf("TickOff")
+        "PauseOnUnblock", 0..2, 0..5, "ticks", aliases = listOf("TickOff")
     ).onChanged { range ->
         pauseOnUnblockTicks = range.random()
     }
@@ -100,8 +111,15 @@ object KillAuraAutoBlock : ToggleableValueGroup(ModuleKillAura, "AutoBlocking", 
     var pauseOnUnblockTicks: Int = pauseOnUnblockTicksRange.random()
 
     private val chance = percentageChance("Chance", 100f)
-    val blink by int("Blink", 0, 0..10, "ticks")
 
+    /**
+     * BOOSTED: Default blink increased from 0 to 2 for smoother blocking.
+     */
+    val blink by int("Blink", 2, 0..10, "ticks")
+
+    /**
+     * BOOSTED: Default changed to true for better protection.
+     */
     private val prioritizeBlocking by boolean("PrioritizeBlocking", true)
     val onScanRange by boolean("OnScanRange", true)
 

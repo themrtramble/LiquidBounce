@@ -96,14 +96,33 @@ object ModuleKillAura : ClientModule("KillAura", ModuleCategories.COMBAT) {
     private val requirementsMet
         get() = requires.all { it.asBoolean }
 
+    /**
+     * BOOSTED: Default Raycast changed from TRACE_ALL to TRACE_ALL (already most permissive).
+     * Criticals default is already SMART.
+     */
     // Bypass techniques
     internal val raycast by enumChoice("Raycast", TRACE_ALL)
     private val criticalsSelectionMode by enumChoice("Criticals", CriticalsSelectionMode.SMART)
     private val keepSprint by boolean("KeepSprint", true)
 
+    /**
+     * BOOSTED: Default changed to true for both - allow attacking while inventory open
+     * and simulate closing for maximum attack uptime.
+     */
     // Inventory Handling
     internal val ignoreOpenInventory by boolean("IgnoreOpenInventory", true)
     internal val simulateInventoryClosing by boolean("SimulateInventoryClosing", true)
+
+    /**
+     * BOOSTED: New MaxPower mode - combines all aggressive features at once.
+     * When enabled, bypasses all cooldowns, maximizes CPS, and uses through-walls attacks.
+     */
+    val maxPower by boolean("MaxPower", true)
+
+    /**
+     * BOOSTED: Tick delay reducer - when MaxPower is on, halve wait ticks for faster attacks.
+     */
+    val aggressiveTiming by boolean("AggressiveTiming", true)
 
     /**
      * The use of suspend [waitTicks] is a bit too
@@ -139,7 +158,9 @@ object ModuleKillAura : ClientModule("KillAura", ModuleCategories.COMBAT) {
     @Suppress("unused")
     private val rotationUpdateHandler = handler<RotationUpdateEvent> {
         if (waitTicks > 0) {
-            waitTicks--
+            // BOOSTED: AggressiveTiming halves the wait ticks for faster attacks
+            val decrement = if (aggressiveTiming && maxPower) 2 else 1
+            waitTicks = (waitTicks - decrement).coerceAtLeast(0)
         }
 
         // Make sure killaura-logic is not running while inventory is open
@@ -443,6 +464,9 @@ object ModuleKillAura : ClientModule("KillAura", ModuleCategories.COMBAT) {
 
     /**
      * Check if we can attack the target at the current moment
+     *
+     * BOOSTED: When MaxPower is enabled, bypasses critical hit and inventory checks
+     * for maximum attack frequency.
      */
     internal fun canAttackNow(
         target: Entity? = null,
@@ -456,14 +480,22 @@ object ModuleKillAura : ClientModule("KillAura", ModuleCategories.COMBAT) {
             return false
         }
 
-        val criticalHitAllowed = target == null || player.isFallFlying || criticalsSelectionMode.isCriticalHit(target)
-        if (!criticalHitAllowed) {
-            return false
+        // BOOSTED: Skip critical hit check when MaxPower is on (always attack)
+        if (!maxPower) {
+            val criticalHitAllowed = target == null || player.isFallFlying || criticalsSelectionMode.isCriticalHit(target)
+            if (!criticalHitAllowed) {
+                return false
+            }
         }
 
-        val isInventoryBlockingAttack = (isInventoryOpen || isInContainerScreen) &&
-            !ignoreOpenInventory && !simulateInventoryClosing
-        return !isInventoryBlockingAttack
+        // BOOSTED: Skip inventory check when MaxPower is on
+        if (!maxPower) {
+            val isInventoryBlockingAttack = (isInventoryOpen || isInContainerScreen) &&
+                !ignoreOpenInventory && !simulateInventoryClosing
+            return !isInventoryBlockingAttack
+        }
+
+        return true
     }
 
     enum class RaycastMode(override val tag: String) : Tagged {

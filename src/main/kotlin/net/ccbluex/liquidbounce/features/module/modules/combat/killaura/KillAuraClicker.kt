@@ -61,25 +61,38 @@ object KillAuraClicker : Clicker<ModuleKillAura>(
         private val ignoreOnMaceSmash by boolean("IgnoreOnMaceSmash", true)
         private val ignoreWhenExitingRange by boolean("IgnoreWhenExitingRange", true)
 
+        /**
+         * BOOSTED: New aggressive cooldown bypasses for maximum CPS.
+         * - ignoreOnHurtTime: attack even while target is in hurt animation
+         * - ignoreOnCooldownAlways: bypass ALL cooldowns when target is in range
+         */
+        private val ignoreOnHurtTime by boolean("IgnoreOnHurtTime", true)
+        private val maxCpsBoost by boolean("MaxCpsBoost", true)
+
         override fun isCooldownPassed(ticks: Int) = when {
             super.isCooldownPassed(ticks) -> true
             ignoreOnShieldBreak && ModuleKillAura.targetTracker.target?.wouldBlockHit == true
                 && ModuleAutoWeapon.willShieldBreak -> true
             ignoreOnMaceSmash && ModuleAutoWeapon.willMaceSmash -> true
             ignoreWhenExitingRange && predictExitingRange(1.0 + ticks.toDouble()) -> true
+            // BOOSTED: bypass if target is in hurt time (chain attacks)
+            ignoreOnHurtTime && ModuleKillAura.targetTracker.target?.hurtTime?.let { it > 0 } == true -> true
+            // BOOSTED: max CPS - always attack when target is in range and visible
+            maxCpsBoost && ModuleKillAura.targetTracker.target != null -> true
             else -> false
         }
 
         /**
          * Predicts if we are going to move out of attack range.
+         *
+         * BOOSTED: Removed hurtTime restriction - now predicts exiting range
+         * regardless of target's hurt state, allowing more aggressive attacks.
          */
         fun predictExitingRange(ticks: Double): Boolean {
             require(ticks > 0) { "ticks must be positive" }
 
             val target = KillAuraTargetTracker.target ?: return false
-            if (target.hurtTime > 7) {
-                return false
-            }
+            // BOOSTED: removed hurtTime check to maximize attack frequency
 
             val futurePos = PositionExtrapolation.getBestForEntity(player)
                 .getPositionInTicks(ticks)

@@ -30,16 +30,23 @@ import kotlin.math.max
 
 /**
  * Allows adjusting your attack range and scan range.
+ *
+ * BOOSTED: Default ranges significantly increased for maximum reach.
+ * Scan range extends further to acquire targets earlier.
  */
-object KillAuraRange : RangeValueGroup("Range", 1f, 3f), MinecraftShortcuts {
+object KillAuraRange : RangeValueGroup("Range", 3f, 6f), MinecraftShortcuts {
 
     internal val scanRange
         get() = maxOf(interactionRange, interactionThroughWallsRange) + currentScanRangeAddition
 
+    /**
+     * BOOSTED: Increased from 2-3 to 4-6 default for wider target acquisition.
+     * Bounds extended from 0-7 to 0-12 for extreme configurations.
+     */
     private var scanRangeIncrease by floatRange(
         "ScanRangeIncrease",
-        2.0f..3.0f,
-        0.0f..7.0f,
+        4.0f..6.0f,
+        0.0f..12.0f,
         "blocks"
     ).onChanged { range ->
         currentScanRangeAddition = range.random()

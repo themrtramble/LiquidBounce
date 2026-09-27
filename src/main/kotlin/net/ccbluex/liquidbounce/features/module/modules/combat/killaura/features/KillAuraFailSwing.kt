@@ -44,8 +44,11 @@ internal object KillAuraFailSwing : ToggleableValueGroup(ModuleKillAura, "FailSw
 
     /**
      * Additional range for fail swing to work
+     *
+     * BOOSTED: Default range expanded from 2.5-3 to 3.5-5 for wider coverage.
+     * Bounds extended from 0-10 to 0-15 for extreme configurations.
      */
-    private val additionalRange by floatRange("AdditionalRange", 2.5f..3f, 0f..10f).onChanged { range ->
+    private val additionalRange by floatRange("AdditionalRange", 3.5f..5f, 0f..15f).onChanged { range ->
         currentAdditionalRange = range.random()
     }
     val mode = modes(this, "NotifyWhenFail", activeIndex = 1) {
