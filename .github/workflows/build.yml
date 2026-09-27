@@ -306,3 +306,113 @@ jobs:
           echo "- Creates desktop shortcut 'Refresh' to re-apply if launcher overwrites" >> $env:GITHUB_STEP_SUMMARY
           echo "- Creates desktop shortcut 'Restore Official' to revert" >> $env:GITHUB_STEP_SUMMARY
           echo "- Includes uninstaller" >> $env:GITHUB_STEP_SUMMARY
+
+  build-full-installer:
+    needs: [extract-versions, build]
+    runs-on: windows-latest
+    permissions:
+      contents: write
+      actions: write
+    env:
+      LB_VERSION: ${{ needs.extract-versions.outputs.lb_version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: liquidbounce-${{ needs.extract-versions.outputs.lb_version }}-jar
+          path: installer/
+
+      - name: Rename JAR for installer
+        shell: pwsh
+        run: |
+          Write-Host "=== Files in installer/ ==="
+          Get-ChildItem installer/
+          $jar = Get-ChildItem installer/ -Filter "liquidbounce-*.jar" | Select-Object -First 1
+          if (-not $jar) { throw "No JAR found in installer/" }
+          Write-Host "Found: $($jar.Name)"
+          Rename-Item $jar.FullName "liquidbounce-boosted.jar"
+          Write-Host "=== After rename ==="
+          Get-ChildItem installer/
+
+      - name: Download LiquidLauncher and mod dependencies
+        shell: pwsh
+        working-directory: installer
+        run: |
+          Write-Host "=== Downloading dependencies ==="
+          ./download-dependencies.ps1
+          Write-Host "=== Final files for installer ==="
+          Get-ChildItem -Recurse | Where-Object { -not $_.PSIsContainer } | Format-Table Name, @{Name="SizeMB";Expression={"{0:N2}" -f ($_.Length/1MB)}}, FullName -AutoSize
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress --limit-output
+          if (-not (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe")) {
+            throw "Inno Setup install failed"
+          }
+          Write-Host "Inno Setup installed at: C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+
+      - name: Compile FULL installer EXE
+        shell: pwsh
+        run: |
+          cd installer
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          & $iscc "liquidbounce-full-installer.iss" /Q
+          if (-not (Test-Path "Output\LiquidBounce-Boosted-FullInstaller.exe")) {
+            throw "Full installer EXE was not created"
+          }
+          Write-Host "=== Full Installer EXE created ==="
+          Get-ChildItem Output/
+          (Get-Item "Output\LiquidBounce-Boosted-FullInstaller.exe").Length / 1MB | ForEach-Object { "Size: {0:N2} MB" -f $_ }
+
+      - name: Upload full installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiquidBounce-Boosted-FullInstaller-${{ github.sha }}
+          path: installer/Output/LiquidBounce-Boosted-FullInstaller.exe
+          retention-days: 90
+
+      - name: Add full installer to GitHub Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/nextgen'
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: nightly-${{ github.sha }}
+          files: installer/Output/LiquidBounce-Boosted-FullInstaller.exe
+
+      - name: Full installer summary
+        shell: pwsh
+        env:
+          FABRICAPI_VERSION: ${{ needs.extract-versions.outputs.fabricapi_version }}
+          FABRIC_KOTLIN_VERSION: ${{ needs.extract-versions.outputs.fabric_kotlin_version }}
+        run: |
+          $size = (Get-Item "installer/Output/LiquidBounce-Boosted-FullInstaller.exe").Length / 1MB
+          echo "### Full Windows Installer Summary" >> $env:GITHUB_STEP_SUMMARY
+          echo "" >> $env:GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $env:GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $env:GITHUB_STEP_SUMMARY
+          echo "| Installer | \`LiquidBounce-Boosted-FullInstaller.exe\` |" >> $env:GITHUB_STEP_SUMMARY
+          echo "| Size | $("{0:N2}" -f $size) MB |" >> $env:GITHUB_STEP_SUMMARY
+          echo "| Built with | Inno Setup 6 |" >> $env:GITHUB_STEP_SUMMARY
+          echo "| Commit | ${{ github.sha }} |" >> $env:GITHUB_STEP_SUMMARY
+          echo "" >> $env:GITHUB_STEP_SUMMARY
+          echo "## What's Bundled" >> $env:GITHUB_STEP_SUMMARY
+          echo "- LiquidLauncher v0.6.1 (official CCBlueX installer)" >> $env:GITHUB_STEP_SUMMARY
+          echo "- Boosted LiquidBounce.jar (MrTramble edition with MaxPower KillAura)" >> $env:GITHUB_STEP_SUMMARY
+          echo "- Fabric API $env:FABRICAPI_VERSION" >> $env:GITHUB_STEP_SUMMARY
+          echo "- Fabric Kotlin $env:FABRIC_KOTLIN_VERSION" >> $env:GITHUB_STEP_SUMMARY
+          echo "- Sodium, Lithium, Mod Menu (performance + UI)" >> $env:GITHUB_STEP_SUMMARY
+          echo "- ViaFabricPlus, ExploitPreventer, ImmediatelyFast" >> $env:GITHUB_STEP_SUMMARY
+          echo "" >> $env:GITHUB_STEP_SUMMARY
+          echo "## Installer Features" >> $env:GITHUB_STEP_SUMMARY
+          echo "- One-click install of full LiquidBounce client" >> $env:GITHUB_STEP_SUMMARY
+          echo "- Auto-detects mods folder (LiquidLauncher > .minecraft)" >> $env:GITHUB_STEP_SUMMARY
+          echo "- Backs up existing LiquidBounce.jar" >> $env:GITHUB_STEP_SUMMARY
+          echo "- Creates Start Menu + Desktop shortcuts" >> $env:GITHUB_STEP_SUMMARY
+          echo "- Includes 'Refresh Boosted' tool (re-apply if launcher overwrites)" >> $env:GITHUB_STEP_SUMMARY
+          echo "- Includes 'Launch LiquidBounce' one-click shortcut" >> $env:GITHUB_STEP_SUMMARY
+          echo "- Full uninstaller" >> $env:GITHUB_STEP_SUMMARY

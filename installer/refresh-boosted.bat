@@ -1,15 +1,15 @@
 @echo off
 setlocal EnableDelayedExpansion
-title LiquidBounce Boosted - Refresh
+title LiquidBounce Boosted - Refresh / Setup
 color 0B
 
 echo ============================================================
-echo   LiquidBounce Boosted - Refresh Utility
+echo   LiquidBounce Boosted - Setup ^& Refresh Utility
 echo   Re-applies boosted JAR if LiquidLauncher overwrote it
 echo ============================================================
 echo.
 
-:: Detect mods folder
+:: Detect mods folder (LiquidLauncher creates it after first launch)
 set "LIQUID_LAUNCHER=%APPDATA%\CCBlueX\LiquidLauncher\data\gameDir\nextgen\mods"
 set "DEFAULT_MC=%APPDATA%\.minecraft\mods"
 
@@ -19,14 +19,15 @@ if exist "%LIQUID_LAUNCHER%" (
 ) else if exist "%DEFAULT_MC%" (
     set "MODS_FOLDER=%DEFAULT_MC%"
     echo [INFO] Detected default .minecraft mods folder.
+    echo [INFO] LiquidLauncher mods folder not found.
+    echo [INFO] If this is first launch, run LiquidLauncher once to create it,
+    echo [INFO] then run this refresh tool again.
 ) else (
-    echo [ERROR] No mods folder found!
-    echo Expected one of:
-    echo   %LIQUID_LAUNCHER%
-    echo   %DEFAULT_MC%
-    echo.
-    pause
-    exit /b 1
+    echo [INFO] No mods folder found yet.
+    echo [INFO] This is normal for first-time install.
+    echo [INFO] Creating LiquidLauncher mods folder...
+    mkdir "%LIQUID_LAUNCHER%" 2>nul
+    set "MODS_FOLDER=%LIQUID_LAUNCHER%"
 )
 
 echo [INFO] Mods folder: %MODS_FOLDER%
@@ -67,8 +68,14 @@ if %ERRORLEVEL% EQU 0 (
     echo.
     echo Location: %MODS_FOLDER%\LiquidBounce.jar
     echo.
-    echo NOTE: If LiquidLauncher replaces it again, just run this
-    echo       "Refresh" shortcut before launching the game.
+    echo NEXT STEPS:
+    echo   1. Open LiquidLauncher from Start Menu
+    echo   2. Click PLAY to launch Minecraft
+    echo   3. In game, press RShift to open ClickGUI
+    echo   4. Combat category -^> KillAura (MaxPower is ON by default!)
+    echo.
+    echo NOTE: If LiquidLauncher replaces the boosted JAR again,
+    echo       run this "Refresh" shortcut before launching the game.
     echo.
     echo Tip: Disable auto-update in LiquidLauncher settings to
     echo      prevent the launcher from overwriting this JAR.
@@ -79,5 +86,5 @@ if %ERRORLEVEL% EQU 0 (
     echo.
 )
 
-timeout /t 5 >nul
+timeout /t 8 >nul
 exit /b 0
