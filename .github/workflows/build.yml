@@ -217,3 +217,92 @@ jobs:
           echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Build successful! Artifacts uploaded." >> $GITHUB_STEP_SUMMARY
+
+  build-installer:
+    needs: [extract-versions, build]
+    runs-on: windows-latest
+    permissions:
+      contents: write
+      actions: write
+    env:
+      LB_VERSION: ${{ needs.extract-versions.outputs.lb_version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: liquidbounce-${{ needs.extract-versions.outputs.lb_version }}-jar
+          path: installer/
+
+      - name: Rename JAR for installer
+        shell: pwsh
+        run: |
+          Write-Host "=== Files in installer/ ==="
+          Get-ChildItem installer/
+          $jar = Get-ChildItem installer/ -Filter "liquidbounce-*.jar" | Select-Object -First 1
+          if (-not $jar) { throw "No JAR found in installer/" }
+          Write-Host "Found: $($jar.Name)"
+          Rename-Item $jar.FullName "liquidbounce-boosted.jar"
+          Write-Host "=== After rename ==="
+          Get-ChildItem installer/
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress --limit-output
+          if (-not (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe")) {
+            throw "Inno Setup install failed"
+          }
+          Write-Host "Inno Setup installed at: C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+
+      - name: Compile installer EXE
+        shell: pwsh
+        run: |
+          cd installer
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          & $iscc "liquidbounce-installer.iss" /Q
+          if (-not (Test-Path "Output\LiquidBounce-Boosted-Installer.exe")) {
+            throw "Installer EXE was not created"
+          }
+          Write-Host "=== Installer EXE created ==="
+          Get-ChildItem Output/
+          (Get-Item "Output\LiquidBounce-Boosted-Installer.exe").Length / 1MB | ForEach-Object { "Size: {0:N2} MB" -f $_ }
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiquidBounce-Boosted-Installer-${{ github.sha }}
+          path: installer/Output/LiquidBounce-Boosted-Installer.exe
+          retention-days: 90
+
+      - name: Add installer to GitHub Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/nextgen'
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: nightly-${{ github.sha }}
+          files: installer/Output/LiquidBounce-Boosted-Installer.exe
+
+      - name: Installer summary
+        shell: pwsh
+        run: |
+          $size = (Get-Item "installer/Output/LiquidBounce-Boosted-Installer.exe").Length / 1MB
+          echo "### Windows Installer Summary" >> $env:GITHUB_STEP_SUMMARY
+          echo "" >> $env:GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $env:GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $env:GITHUB_STEP_SUMMARY
+          echo "| Installer | \`LiquidBounce-Boosted-Installer.exe\` |" >> $env:GITHUB_STEP_SUMMARY
+          echo "| Size | $("{0:N2}" -f $size) MB |" >> $env:GITHUB_STEP_SUMMARY
+          echo "| Built with | Inno Setup 6 |" >> $env:GITHUB_STEP_SUMMARY
+          echo "| Commit | ${{ github.sha }} |" >> $env:GITHUB_STEP_SUMMARY
+          echo "" >> $env:GITHUB_STEP_SUMMARY
+          echo "## Installer Features" >> $env:GITHUB_STEP_SUMMARY
+          echo "- Auto-detects mods folder (LiquidLauncher or default .minecraft)" >> $env:GITHUB_STEP_SUMMARY
+          echo "- Backs up existing LiquidBounce.jar" >> $env:GITHUB_STEP_SUMMARY
+          echo "- Installs boosted JAR as LiquidBounce.jar" >> $env:GITHUB_STEP_SUMMARY
+          echo "- Creates desktop shortcut 'Refresh' to re-apply if launcher overwrites" >> $env:GITHUB_STEP_SUMMARY
+          echo "- Creates desktop shortcut 'Restore Official' to revert" >> $env:GITHUB_STEP_SUMMARY
+          echo "- Includes uninstaller" >> $env:GITHUB_STEP_SUMMARY
