@@ -155,7 +155,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: liquidbounce-build-${{ needs.extract-versions.outputs.lb_version }}-${{ github.sha::7 }}
+          name: liquidbounce-build-${{ needs.extract-versions.outputs.lb_version }}-${{ github.sha }}
           path: build/libs/artifact/*
           retention-days: 30
           compression-level: 0
@@ -174,8 +174,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: nightly-${{ github.sha::7 }}
-          name: Nightly Build ${{ needs.extract-versions.outputs.lb_version }} (${{ github.sha::7 }})
+          tag_name: nightly-${{ github.sha }}
+          name: Nightly Build ${{ needs.extract-versions.outputs.lb_version }} (${{ github.sha }})
           body: |
             ## LiquidBounce Nightly Build
 
