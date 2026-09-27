@@ -35,14 +35,14 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 ; ===== LiquidLauncher installer (bundled) =====
 Source: "LiquidLauncher-setup.exe"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall nocompression; Check: ShouldInstallLauncher
 
-; ===== Boosted LiquidBounce JAR =====
+; ===== Boosted LiquidBounce JAR (stored in LocalAppData for refresh script) =====
 Source: "liquidbounce-boosted.jar"; DestDir: "{localappdata}\LiquidBounceBoosted"; DestName: "liquidbounce-boosted.jar"; Flags: ignoreversion
 
-; ===== Mod dependencies (only ones that downloaded successfully) =====
-Source: "mods\*.jar"; DestDir: "{code:GetModsFolder}"; Flags: ignoreversion recursesubdirs; Check: ModFilesExist
+; ===== Mod dependencies (Fabric API + Fabric Kotlin from FabricMC Maven) =====
+Source: "mods\*.jar"; DestDir: "{code:GetModsFolder}"; Flags: ignoreversion recursesubdirs
 
 ; ===== Boosted JAR also goes to mods folder as LiquidBounce.jar =====
-Source: "liquidbounce-boosted.jar"; DestDir: "{code:GetModsFolder}"; DestName: "LiquidBounce.jar"; Flags: ignoreversion overwritereadonly; BeforeInstall: BackupExistingJar; Check: ShouldInstallBoostedJar
+Source: "liquidbounce-boosted.jar"; DestDir: "{code:GetModsFolder}"; DestName: "LiquidBounce.jar"; Flags: ignoreversion overwritereadonly; BeforeInstall: BackupExistingJar
 
 ; ===== Helper scripts =====
 Source: "refresh-boosted.bat"; DestDir: "{localappdata}\LiquidBounceBoosted"; Flags: ignoreversion
@@ -92,16 +92,6 @@ function ShouldInstallLauncher(): Boolean;
 begin
   // Install launcher if LiquidLauncher.exe doesn't already exist
   Result := not FileExists(ExpandConstant('{localappdata}\Programs\LiquidLauncher\LiquidLauncher.exe'));
-end;
-
-function ShouldInstallBoostedJar(): Boolean;
-begin
-  Result := True;
-end;
-
-function ModFilesExist(): Boolean;
-begin
-  Result := True;
 end;
 
 procedure BackupExistingJar;
