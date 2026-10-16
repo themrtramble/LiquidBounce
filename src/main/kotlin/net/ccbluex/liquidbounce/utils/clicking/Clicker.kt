@@ -53,6 +53,7 @@ open class Clicker<T>(
     maxCps: Int = 30,
     name: String = "Clicker",
     simulateAttackKeyDown: Boolean = false,
+    defaultCps: IntRange = 11..14,
 ) : ValueGroup(name, aliases = listOf("ClickScheduler")), EventListener where T : EventListener {
 
     companion object {
@@ -60,8 +61,8 @@ open class Clicker<T>(
     }
 
     private val technique by enumChoice("Technique", ClickTechnique.HUMAN)
-    private val cps by intRange("CPS", 11..14, 1..maxCps, "clicks")
-    private val maxPerTick by int("MaxPerTick", 2, 1..5, "clicks")
+    private val cps by intRange("CPS", defaultCps, 1..maxCps, "clicks")
+    private val maxPerTick by int("MaxPerTick", 3, 1..5, "clicks")
 
     init {
         itemCooldown?.let(this::tree)

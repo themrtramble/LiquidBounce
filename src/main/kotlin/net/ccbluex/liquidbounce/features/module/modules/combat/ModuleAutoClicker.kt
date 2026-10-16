@@ -59,7 +59,7 @@ object ModuleAutoClicker : ClientModule("AutoClicker", ModuleCategories.COMBAT, 
 
     object AttackButton : ToggleableValueGroup(this, "Attack", true) {
 
-        val clicker = tree(Clicker(this, mc.options.keyAttack, simulateAttackKeyDown = true))
+        val clicker = tree(Clicker(this, mc.options.keyAttack, maxCps = 60, simulateAttackKeyDown = true, defaultCps = 60..60))
 
         internal val requiresNoInput by boolean("RequiresNoInput", false)
         internal val delayOnBroken by boolean("DelayOnBroken", true)
@@ -130,7 +130,7 @@ object ModuleAutoClicker : ClientModule("AutoClicker", ModuleCategories.COMBAT, 
     }
 
     object UseButton : ToggleableValueGroup(this, "Use", false) {
-        val clicker = tree(Clicker(this, mc.options.keyUse, null))
+        val clicker = tree(Clicker(this, mc.options.keyUse, null, maxCps = 60))
         internal val holdingItemsForIgnore by items(
             "HoldingItemsForIgnore",
             default = itemSortedSetOf(
