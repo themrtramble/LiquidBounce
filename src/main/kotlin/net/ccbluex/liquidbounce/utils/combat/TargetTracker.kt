@@ -102,7 +102,7 @@ open class TargetSelector(
         private set
 
     private val range = rangeValue.register(this)
-    private val fov by float("FOV", 180f, 0f..180f)
+    private val fov by float("FOV", 180f, 0f..360f)
     private val hurtTime by int("HurtTime", 10, 0..10)
 
     private val priority by multiEnumChoice(
