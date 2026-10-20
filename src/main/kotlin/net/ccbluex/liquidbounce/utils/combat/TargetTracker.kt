@@ -102,7 +102,7 @@ open class TargetSelector(
         private set
 
     private val range = rangeValue.register(this)
-    private val fov by float("FOV", 180f, 0f..360f)
+    private val fov by float("FOV", 360f, 0f..360f)
     private val hurtTime by int("HurtTime", 10, 0..10)
 
     private val priority by multiEnumChoice(
@@ -150,7 +150,7 @@ open class TargetSelector(
             && entity.hurtTime <= hurtTime
             && validateRange(entity)
             && entity.shouldBeAttacked()
-            && (fov >= 180f || Mth.cos(fov.toDouble().toRadians()) <= RotationUtil.crosshairCosToEntity(entity))
+            && (fov >= 360f || Mth.cos((fov / 2.0).toRadians()) <= RotationUtil.crosshairCosToEntity(entity))
 
     private fun validateRange(entity: LivingEntity): Boolean {
         if (range == null) return true
